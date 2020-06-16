@@ -7,7 +7,6 @@ Autor: Eduardo Lima Pinelli
 
 import os
 import sys
-import random
 import pygame
 
 # variaveis das cores
@@ -72,19 +71,23 @@ class Personagem(pygame.sprite.Sprite):
 class Obstaculos(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        obstaculo1 = pygame.image.load(os.path.join("imagens", "obstaculo1.png")).convert()
-        obstaculo2 = pygame.image.load(os.path.join("imagens", "obstaculo2.png")).convert()
-        obstaculo3 = pygame.image.load(os.path.join("imagens", "obstaculo3.png")).convert()
+        img_obst = os.path.join("imagens", "obstaculo1.png")
 
-        lista_obstaculos = [obstaculo1, obstaculo2, obstaculo3]
-
-        self.image = carrega_sprite(random.choice(lista_obstaculos))
+        self.image = carrega_sprite(img_obst)
         self.rect = self.image.get_rect()
-        self.speedx = 4
+        self.speedx = -4
+        self.set_posicao(700, 280)
+        self.set_velocidade(-2, 0)
+        self.rect.left = 700
+        self.rect.bottom = 300
+
+    def set_posicao(self, x, y):
+        self.pos = pygame.math.Vector2(x, y)
+
+    def set_velocidade(self, vx, vy):
+        self.velocidade = pygame.math.Vector2(vx, vy)
 
     def update(self):
-        self.rect.left = 750
-        self.rect.y = 280
         self.rect.x += self.speedx
 
 
@@ -102,14 +105,12 @@ def main():
     sprites = pygame.sprite.Group()
     dinossaurinho = Personagem(sprites)
     sprites.add(dinossaurinho)
-    obstaculos = pygame.sprite.Group()  # criando o grupo de sprites de obstaculos
-    sprites.add(obstaculos)
 
     # Rotinas musica de fundo
     arquivo_mus = os.path.join('sons', 'bg_music.ogg')
     path_mus = os.path.join(os.path.dirname(__file__), arquivo_mus)
     pygame.mixer.music.load(path_mus)  # carrega o arquivo da musica
-    pygame.mixer.music.set_volume(0.3)  # ajusta o volume da musica
+    pygame.mixer.music.set_volume(0.2)  # ajusta o volume da musica
     pygame.mixer.music.play(-1)  # da play na musica / loop, -1 = infinito
 
     # Carregando arquivo de som dos tiros
@@ -121,7 +122,7 @@ def main():
 
     rel = pygame.time.Clock()  # obj para controle das atualizacoes de imagem
 
-    pygame.time.set_timer(pygame.USEREVENT, 2000)  # timer de 2 segundos
+    pygame.time.set_timer(pygame.USEREVENT, 1500)  # timer de 2 segundos
 
     score = 0  # pontuacao do jogador
 
@@ -130,13 +131,13 @@ def main():
 
     jogo = play  # jogo no inicio está sendo rodado
 
-    # codigo que percebe caso ocorra colisao
-    colisao = pygame.sprite.spritecollide(dinossaurinho, obstaculos, False, pygame.sprite.collide_circle)
+    pontuacao = 0
 
     # Loop do Jogo
 
     while True:
         var_tempo = rel.tick(60)  # velocidade de refresh da tela do jogo
+        pontuacao += var_tempo / 60
 
         eventos = pygame.event.get()  # pega os eventos que ocorrem na interação com o jogo
 
@@ -150,46 +151,40 @@ def main():
                     pygame.quit()
                     sys.exit()
                 if evento.key == pygame.K_p:  # evento em que a tecla P é apertada e o jogo é pausado
-                    if jogo == play:  # codigo que pausa o jogo por completo
+                    if jogo != pause:  # codigo que pausa o jogo por completo
                         pygame.mixer.music.pause()
                         texto_pausa = fonte_pause.render("PAUSE", True, VERDE, CINZA)
-                        tela.blit(texto_pausa, ((tela.get_width()-texto_pausa.get_width())/2,
-                                                (tela.get_height()-texto_pausa.get_height())/2))
+                        tela.blit(texto_pausa, ((tela.get_width() - texto_pausa.get_width()) / 2,
+                                          (tela.get_height() - texto_pausa.get_height()) / 2))
                         jogo = pause
                     else:  # codigo que despausa o jogo
                         pygame.mixer.music.unpause()
                         jogo = play
+
                 if evento.key == pygame.K_UP:
                     som_tiro.play()
-                    dinossaurinho.rect.bottom = 220
+                    dinossaurinho.rect.bottom = 180
 
             if evento.type == pygame.KEYUP:
                 if evento.key == pygame.K_UP:
                     dinossaurinho.rect.bottom = 300
 
-            #if evento.type == pygame.KEYUP:
-               # if evento.key == pygame.K_UP:
-               #     pos_dino[1] = 300 - dinossaurinho.get_height()
+            if evento.type == pygame.USEREVENT and jogo == play:
+                obs = Obstaculos()  # criando sprites do personagem e já colocando no grupo de sprite
+                sprites.add(obs)
 
-            if jogo == pause:
-                pygame.display.flip()
-                continue
+        if jogo == pause:
+            pygame.display.flip()
+            continue
 
-            #if evento.type == pygame.USEREVENT and jogo == play:
+        tela.fill(CINZA)
+        sprites.update()
+        sprites.draw(tela)
 
+        texto = fonte_score.render("Pontuação: {0}".format(int(pontuacao)), True, BRANCO)
+        tela.blit(texto, ((tela.get_width()-texto.get_width())/2, 0))  # coloca na tela a pontuacao
 
-            if colisao:  # codigo que roda caso ocorra colisao
-                for i in obstaculos:
-                    i.kill()
-                pygame.display.update()
-                tela.fill(BRANCO)
-                pygame.display.flip()
-                gameover = fonte_pause.render("FIM DE JOGO", True, PRETO, BRANCO)
-                tela.blit(gameover, ((tela.get_width()-gameover.get_width()/2),
-                                     tela.get_height()-gameover.get_height()/2))
-
-            sprites.draw(tela)
-            pygame.display.flip()  # faz a atualização da tela
+        pygame.display.flip()  # faz a atualização da tela
 
 
 if __name__ == "__main__":
